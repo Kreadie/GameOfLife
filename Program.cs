@@ -1,12 +1,13 @@
 ﻿using Raylib_cs;
-using System.Reflection.Metadata;
-using System.Text.Json.Serialization;
 
 const int n = 1000;
 const int size = 2;
+int amount = 0;
+int generation = 0;
 bool isActive = false;
-bool allowGrid = false;
-Raylib.InitWindow(n, n, "Game of Life");
+bool allowGrid = true;
+bool showInfo = true;
+Raylib.InitWindow(n + 160, n, "Game of Life");
 Raylib.SetTargetFPS(60);
 Random rand = new Random();
 
@@ -19,17 +20,11 @@ byte[,] grid = new byte[n, n];
 
 void initCells()
 {
+    generation = 0;
     for(int i = 0; i < n; i++)
-    {
         for(int j = 0; j < n; j++)
-        {
             grid[i, j] = 0;
-        }
-        
-    }
 }
-
-
 void addCellOnClick()
 {
     isActive = false;
@@ -37,26 +32,27 @@ void addCellOnClick()
     int y = Raylib.GetMouseY();
     x = (int)(Math.Round(x / 5.0) * 5.0);
     y = (int)(Math.Round(y / 5.0) * 5.0);
+
     //top-left
     int topVert = x - size;
     int topHor = y - size;
     //bottom-right
     int botVert = x + size;
     int botHor = y + size;
-    
+
     if (topVert < 0 || topHor < 0 || botVert > n || botHor > n ||
         grid[topVert, topHor] == 1 || grid[topVert, topHor] == 2 ||
         grid[botVert, botHor] == 1 || grid[botVert, botHor] == 2)
         return;
-    
+
     for (int i = topVert; i <= botVert; i++)
     {
-        for(int j = topHor; j <= botHor; j++)
+        for (int j = topHor; j <= botHor; j++)
         {
             if (i == x && j == y)
                 grid[i, j] = 2;
         }
-    }   
+    }
 }
 void killCellOnClick()
 {
@@ -64,10 +60,13 @@ void killCellOnClick()
     int y = Raylib.GetMouseY();
     x = (int)(Math.Round(x / 5.0) * 5.0);
     y = (int)(Math.Round(y / 5.0) * 5.0);
+    if (x < 5 || x > n - 5 || y < 5 || y > n - 5)
+        return;
     killCell(x, y);
 }
 void drawAliveCell()
 {
+    amount = 0;
     for (int i = 5; i <= n - 5; i += 5)
     {
         for (int j = 5; j <= n - 5; j += 5)
@@ -87,32 +86,36 @@ void killCell(int I, int J)
         for(int j = J - size; j <= J + size; j++)
         {
             grid[i, j] = 0;
-            Raylib.DrawPixel(i, j, Color.RayWhite);
+            Raylib.DrawPixel(i, j, Color.Black);
         }
     }
 }
 
 void addCell(int I, int J)
 {
+    amount++;
     for (int i = I - size; i <= I + size; i++)
     {
         for (int j = J - size; j <= J + size; j++)
         {
             if (i == I && j == J)
                 grid[i, j] = 2;
-            Raylib.DrawPixel(i, j, Color.Black);
+            Raylib.DrawPixel(i, j, Color.RayWhite);
         }
     }
 }
 
 void generateRandomCells()
 {
+    amount = 0;
     initCells();
     isActive = false;
     for (int i = 0; i < 10000; i++)
     {
         int x = (int)(Math.Round(rand.Next(5, n - 5) / 5.0) * 5.0);
         int y = (int)(Math.Round(rand.Next(5, n - 5) / 5.0) * 5.0);
+        if (grid[x, y] == 2)
+            continue;
         addCell(x, y);
     }
 }
@@ -120,15 +123,16 @@ void drawGrid()
 {
     for(int i = 4; i < n; i+= 5 )
     {
-        Raylib.DrawLine(i, 0, i, n, Color.LightGray);
+        Raylib.DrawLine(i, 3, i, n - 1, Color.DarkGray);
     }
     for(int j = 3; j < n; j += 5)
     {
-        Raylib.DrawLine(0, j, n, j, Color.LightGray);
+        Raylib.DrawLine(3, j, n - 1, j, Color.DarkGray);
     }
 }
 void play()
 {
+    generation++;
     for(int i = 5; i <= n - 5; i += 5)
     {
         for(int j = 5; j <= n - 5; j += 5)
@@ -145,10 +149,24 @@ void fieldTraversal(int I, int J)
     {
         for (int j = J - 5; j <= J + 5; j += 5)
         {
-            if (i <= 0 || i >= n || j <= 0 || j >= n || (i == I && j == J))
+            //periodic grid
+            //if (i <= 0 || i >= n || j <= 0 || j >= n || (i == I && j == J))
+            //    continue;
+
+            if (i == I && j == J)
                 continue;
-            
-            if (grid[i, j] == 2 || grid[i, j] == 4)
+            int m = i;
+            int k = j;
+            if (i <= 0)
+                m = n - 5;
+            if (i >= n)
+                m = 5;
+            if (j <= 0)
+                k = n - 5;
+            if (j >= n)
+                k = 5;
+            //for periodic grid, change m -> i, k -> j and comment ifs above
+            if (grid[m, k] == 2 || grid[m, k] == 4)
                 neighbours++;
         }
     }
@@ -157,12 +175,27 @@ void fieldTraversal(int I, int J)
     if ((neighbours < 2 || 3 < neighbours) && grid[I, J] == 2)
         grid[I, J] = 4;
 }
+void info()
+{
+    Raylib.DrawText("Cell amount: " + amount, n + 5 , 5, 18, Color.Purple);
+    Raylib.DrawText("FPS: " + Raylib.GetFPS(), n + 5 , 30, 18, Color.Purple);
+    Raylib.DrawText("Generation: " + generation, n + 5 , 55, 18, Color.Purple);
+    Raylib.DrawText("R - reset", n + 5 , 80, 18, Color.Purple);
+    Raylib.DrawText("G - generate", n + 5 , 105, 18, Color.Purple);
+    Raylib.DrawText("Z - grid", n + 5 , 130, 18, Color.Purple);
+    Raylib.DrawText("P - info", n + 5 , 155, 18, Color.Purple);
+    Raylib.DrawText("Space - on/off", n + 5 , 180, 18, Color.Purple);
+    Raylib.DrawText("LMB - add", n + 5, 205, 18, Color.Purple);
+    Raylib.DrawText("RMB - kill", n + 5, 230, 18, Color.Purple);
+
+
+}
 
 initCells();
 while(!Raylib.WindowShouldClose())
 {
     Raylib.BeginDrawing();
-    Raylib.ClearBackground(Color.RayWhite);
+    Raylib.ClearBackground(Color.Black);
 
     if(Raylib.IsMouseButtonPressed(MouseButton.Left))
         addCellOnClick();
@@ -178,16 +211,20 @@ while(!Raylib.WindowShouldClose())
         generateRandomCells();
     if (Raylib.IsKeyPressed(KeyboardKey.Z))
         allowGrid = !allowGrid;
+    if (Raylib.IsKeyPressed(KeyboardKey.P))
+        showInfo = !showInfo;
     if (isActive)
         play();
-
+    
     drawAliveCell();
     if(allowGrid)
         drawGrid();
+    if (showInfo)
+        info();
     Raylib.EndDrawing();
 }
 
 Raylib.CloseWindow();
 
-//TODO: вынос некоторых параметров на экран (fps, кол-во клеток, итд).
-//TODO: "бесконечное" поле
+
+//TODO: передавать некоторые значения через параметры запуска, например разрешение экрана.
