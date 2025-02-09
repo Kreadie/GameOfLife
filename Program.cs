@@ -21,8 +21,8 @@ byte[,] grid = new byte[n, n];
 void initCells()
 {
     generation = 0;
-    for(int i = 0; i < n; i++)
-        for(int j = 0; j < n; j++)
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < n; j++)
             grid[i, j] = 0;
 }
 void addCellOnClick()
@@ -64,7 +64,7 @@ void killCellOnClick()
         return;
     killCell(x, y);
 }
-void drawAliveCell()
+void drawCellsFromGrid()
 {
     amount = 0;
     for (int i = 5; i <= n - 5; i += 5)
@@ -72,7 +72,7 @@ void drawAliveCell()
         for (int j = 5; j <= n - 5; j += 5)
         {
             if (grid[i, j] == 2 || grid[i, j] == 3)
-                addCell(i, j);
+                drawCell(i, j);
             else if (grid[i, j] == 4)
                 killCell(i, j);
         }
@@ -81,19 +81,13 @@ void drawAliveCell()
 
 void killCell(int I, int J)
 {
-    for(int i = I - size; i <= I + size; i++)
-    {
-        for(int j = J - size; j <= J + size; j++)
-        {
-            grid[i, j] = 0;
-            Raylib.DrawPixel(i, j, Color.Black);
-        }
-    }
+    grid[I, J] = 0;
 }
 
-void addCell(int I, int J)
+void drawCell(int I, int J)
 {
     amount++;
+    
     for (int i = I - size; i <= I + size; i++)
     {
         for (int j = J - size; j <= J + size; j++)
@@ -110,13 +104,23 @@ void generateRandomCells()
     amount = 0;
     initCells();
     isActive = false;
-    for (int i = 0; i < 10000; i++)
+    //for (int i = 0; i < 10000; i++)
+    //{
+    //    int x = (int)(Math.Round(rand.Next(5, n - 5) / 5.0) * 5.0);
+    //    int y = (int)(Math.Round(rand.Next(5, n - 5) / 5.0) * 5.0);
+    //    if (grid[x, y] == 2)
+    //        continue;
+    //    drawCell(x, y);
+    //}
+    //"smart" generation
+    for (int i = 5; i < n; i += 5)
     {
-        int x = (int)(Math.Round(rand.Next(5, n - 5) / 5.0) * 5.0);
-        int y = (int)(Math.Round(rand.Next(5, n - 5) / 5.0) * 5.0);
-        if (grid[x, y] == 2)
-            continue;
-        addCell(x, y);
+        for (int j = 5; j < n; j += 5)
+        {
+            int number = rand.Next(0, 2);
+            if (number == 1)
+                drawCell(i, j);
+        }
     }
 }
 void drawGrid()
@@ -149,7 +153,7 @@ void fieldTraversal(int I, int J)
     {
         for (int j = J - 5; j <= J + 5; j += 5)
         {
-            //periodic grid
+            //non-periodic grid
             //if (i <= 0 || i >= n || j <= 0 || j >= n || (i == I && j == J))
             //    continue;
 
@@ -165,15 +169,33 @@ void fieldTraversal(int I, int J)
                 k = n - 5;
             if (j >= n)
                 k = 5;
-            //for periodic grid, change m -> i, k -> j and comment ifs above
+            //for non-periodic grid, change m -> i, k -> j and comment ifs above
             if (grid[m, k] == 2 || grid[m, k] == 4)
                 neighbours++;
         }
     }
+
+    //original game of life rules
     if (neighbours == 3 && grid[I, J] == 0)
         grid[I, J] = 3;
     if ((neighbours < 2 || 3 < neighbours) && grid[I, J] == 2)
         grid[I, J] = 4;
+
+    //life without death's rules
+    //if (neighbours == 3 && grid[I, J] == 0)
+    //    grid[I, J] = 3;
+
+    //highlife's rules
+    //if ((neighbours == 3 || neighbours == 6) && grid[I, J] == 0)
+    //    grid[I, J] = 3;
+    //if ((neighbours < 2 || 3 < neighbours) && grid[I, J] == 2)
+    //    grid[I, J] = 4;
+
+    //day & night's rules
+    //if ((neighbours == 3 || neighbours == 6 || neighbours == 7 || neighbours == 8) && grid[I, J] == 0)
+    //    grid[I, J] = 3;
+    //if (neighbours != 3 && neighbours != 4 && neighbours != 6 && neighbours != 7 && neighbours != 8 && grid[I, J] == 2)
+    //    grid[I, J] = 4;
 }
 void info()
 {
@@ -192,12 +214,12 @@ void info()
 }
 
 initCells();
-while(!Raylib.WindowShouldClose())
+while (!Raylib.WindowShouldClose())
 {
     Raylib.BeginDrawing();
     Raylib.ClearBackground(Color.Black);
 
-    if(Raylib.IsMouseButtonPressed(MouseButton.Left))
+    if (Raylib.IsMouseButtonPressed(MouseButton.Left))
         addCellOnClick();
 
     if(Raylib.IsMouseButtonPressed(MouseButton.Right))
@@ -216,7 +238,7 @@ while(!Raylib.WindowShouldClose())
     if (isActive)
         play();
     
-    drawAliveCell();
+    drawCellsFromGrid();
     if(allowGrid)
         drawGrid();
     if (showInfo)
@@ -227,4 +249,4 @@ while(!Raylib.WindowShouldClose())
 Raylib.CloseWindow();
 
 
-//TODO: передавать некоторые значения через параметры запуска, например разрешение экрана.
+//TODO: передавать некоторые значения через параметры запуска
