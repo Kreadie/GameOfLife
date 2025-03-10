@@ -1,19 +1,20 @@
 ﻿using Raylib_cs;
 
+GameMode gameMode = GameMode.Default;
 const int n = 1000;
-const int size = 2;
-int amount = 0;
+const int cellSize = 1;
+int cellCount = 0;
 int generation = 0;
-bool isActive = false;
-bool allowGrid = true;
-bool showInfo = true;
+bool isGameActive = false;
+bool isGrid = true;
+bool isInfo = true;
 Raylib.InitWindow(n + 160, n, "Game of Life");
 Raylib.SetTargetFPS(60);
 Random rand = new Random();
 
 byte[,] grid = new byte[n, n];
+//Cell's values:
 //0 - dead
-//1 - extra pixels for bigger size
 //2 - cell's center
 //3 - will be populated next generation
 //4 - will be dead next generation
@@ -27,32 +28,14 @@ void initCells()
 }
 void addCellOnClick()
 {
-    isActive = false;
+    isGameActive = false;
     int x = Raylib.GetMouseX();
     int y = Raylib.GetMouseY();
     x = (int)(Math.Round(x / 5.0) * 5.0);
     y = (int)(Math.Round(y / 5.0) * 5.0);
-
-    //top-left
-    int topVert = x - size;
-    int topHor = y - size;
-    //bottom-right
-    int botVert = x + size;
-    int botHor = y + size;
-
-    if (topVert < 0 || topHor < 0 || botVert > n || botHor > n ||
-        grid[topVert, topHor] == 1 || grid[topVert, topHor] == 2 ||
-        grid[botVert, botHor] == 1 || grid[botVert, botHor] == 2)
+    if (x < 5 || x > n - 5 || y < 5 || y > n - 5)
         return;
-
-    for (int i = topVert; i <= botVert; i++)
-    {
-        for (int j = topHor; j <= botHor; j++)
-        {
-            if (i == x && j == y)
-                grid[i, j] = 2;
-        }
-    }
+    grid[x, y] = 2;
 }
 void killCellOnClick()
 {
@@ -62,11 +45,11 @@ void killCellOnClick()
     y = (int)(Math.Round(y / 5.0) * 5.0);
     if (x < 5 || x > n - 5 || y < 5 || y > n - 5)
         return;
-    killCell(x, y);
+    grid[x, y] = 0;
 }
 void drawCellsFromGrid()
 {
-    amount = 0;
+    cellCount = 0;
     for (int i = 5; i <= n - 5; i += 5)
     {
         for (int j = 5; j <= n - 5; j += 5)
@@ -74,23 +57,18 @@ void drawCellsFromGrid()
             if (grid[i, j] == 2 || grid[i, j] == 3)
                 drawCell(i, j);
             else if (grid[i, j] == 4)
-                killCell(i, j);
+                grid[i, j] = 0;
         }
     }
 }
 
-void killCell(int I, int J)
-{
-    grid[I, J] = 0;
-}
-
 void drawCell(int I, int J)
 {
-    amount++;
+    cellCount++;
     
-    for (int i = I - size; i <= I + size; i++)
+    for (int i = I - cellSize; i <= I + cellSize; i++)
     {
-        for (int j = J - size; j <= J + size; j++)
+        for (int j = J - cellSize; j <= J + cellSize; j++)
         {
             if (i == I && j == J)
                 grid[i, j] = 2;
@@ -101,18 +79,9 @@ void drawCell(int I, int J)
 
 void generateRandomCells()
 {
-    amount = 0;
+    cellCount = 0;
     initCells();
-    isActive = false;
-    //for (int i = 0; i < 10000; i++)
-    //{
-    //    int x = (int)(Math.Round(rand.Next(5, n - 5) / 5.0) * 5.0);
-    //    int y = (int)(Math.Round(rand.Next(5, n - 5) / 5.0) * 5.0);
-    //    if (grid[x, y] == 2)
-    //        continue;
-    //    drawCell(x, y);
-    //}
-    //"smart" generation
+    isGameActive = false;
     for (int i = 5; i < n; i += 5)
     {
         for (int j = 5; j < n; j += 5)
@@ -153,10 +122,6 @@ void fieldTraversal(int I, int J)
     {
         for (int j = J - 5; j <= J + 5; j += 5)
         {
-            //non-periodic grid
-            //if (i <= 0 || i >= n || j <= 0 || j >= n || (i == I && j == J))
-            //    continue;
-
             if (i == I && j == J)
                 continue;
             int m = i;
@@ -169,37 +134,46 @@ void fieldTraversal(int I, int J)
                 k = n - 5;
             if (j >= n)
                 k = 5;
-            //for non-periodic grid, change m -> i, k -> j and comment ifs above
             if (grid[m, k] == 2 || grid[m, k] == 4)
                 neighbours++;
         }
     }
 
     //original game of life rules
-    if (neighbours == 3 && grid[I, J] == 0)
-        grid[I, J] = 3;
-    if ((neighbours < 2 || 3 < neighbours) && grid[I, J] == 2)
-        grid[I, J] = 4;
-
+    if(gameMode == GameMode.Default)
+    {
+        if (neighbours == 3 && grid[I, J] == 0)
+            grid[I, J] = 3;
+        if ((neighbours < 2 || 3 < neighbours) && grid[I, J] == 2)
+            grid[I, J] = 4;
+    }
     //life without death's rules
-    //if (neighbours == 3 && grid[I, J] == 0)
-    //    grid[I, J] = 3;
-
+    else if(gameMode == GameMode.LWD)
+    {
+        if (neighbours == 3 && grid[I, J] == 0)
+            grid[I, J] = 3;
+    }
     //highlife's rules
-    //if ((neighbours == 3 || neighbours == 6) && grid[I, J] == 0)
-    //    grid[I, J] = 3;
-    //if ((neighbours < 2 || 3 < neighbours) && grid[I, J] == 2)
-    //    grid[I, J] = 4;
-
+    else if(gameMode == GameMode.Highlife)
+    {
+        if ((neighbours == 3 || neighbours == 6) && grid[I, J] == 0)
+            grid[I, J] = 3;
+        if ((neighbours < 2 || 3 < neighbours) && grid[I, J] == 2)
+            grid[I, J] = 4;
+    }
     //day & night's rules
-    //if ((neighbours == 3 || neighbours == 6 || neighbours == 7 || neighbours == 8) && grid[I, J] == 0)
-    //    grid[I, J] = 3;
-    //if (neighbours != 3 && neighbours != 4 && neighbours != 6 && neighbours != 7 && neighbours != 8 && grid[I, J] == 2)
-    //    grid[I, J] = 4;
+    else if(gameMode == GameMode.DandN)
+    {
+        if ((neighbours == 3 || neighbours == 6 || neighbours == 7 || neighbours == 8) && grid[I, J] == 0)
+            grid[I, J] = 3;
+        if (neighbours != 3 && neighbours != 4 && neighbours != 6 && neighbours != 7 && neighbours != 8 && grid[I, J] == 2)
+            grid[I, J] = 4;
+    }
+
 }
 void info()
 {
-    Raylib.DrawText("Cell amount: " + amount, n + 5 , 5, 18, Color.Purple);
+    Raylib.DrawText("Cell count: " + cellCount, n + 5 , 5, 18, Color.Purple);
     Raylib.DrawText("FPS: " + Raylib.GetFPS(), n + 5 , 30, 18, Color.Purple);
     Raylib.DrawText("Generation: " + generation, n + 5 , 55, 18, Color.Purple);
     Raylib.DrawText("R - reset", n + 5 , 80, 18, Color.Purple);
@@ -209,8 +183,7 @@ void info()
     Raylib.DrawText("Space - on/off", n + 5 , 180, 18, Color.Purple);
     Raylib.DrawText("LMB - add", n + 5, 205, 18, Color.Purple);
     Raylib.DrawText("RMB - kill", n + 5, 230, 18, Color.Purple);
-
-
+    Raylib.DrawText("Gamemode " + gameMode, n + 5, 250, 18, Color.Purple);
 }
 
 initCells();
@@ -226,27 +199,41 @@ while (!Raylib.WindowShouldClose())
         killCellOnClick();
     
     if (Raylib.IsKeyPressed(KeyboardKey.Space))
-        isActive = !isActive;
+        isGameActive = !isGameActive;
     if (Raylib.IsKeyPressed(KeyboardKey.R))
         initCells();
     if (Raylib.IsKeyPressed(KeyboardKey.G))
         generateRandomCells();
     if (Raylib.IsKeyPressed(KeyboardKey.Z))
-        allowGrid = !allowGrid;
+        isGrid = !isGrid;
     if (Raylib.IsKeyPressed(KeyboardKey.P))
-        showInfo = !showInfo;
-    if (isActive)
+        isInfo = !isInfo;
+    if (Raylib.IsKeyPressed(KeyboardKey.One))
+        gameMode = GameMode.Default;
+    if (Raylib.IsKeyPressed(KeyboardKey.Two))
+        gameMode = GameMode.LWD;
+    if (Raylib.IsKeyPressed(KeyboardKey.Three))
+        gameMode = GameMode.Highlife;
+    if (Raylib.IsKeyPressed(KeyboardKey.Four))
+        gameMode = GameMode.DandN;
+    if (isGameActive)
         play();
     
     drawCellsFromGrid();
-    if(allowGrid)
+    if(isGrid)
         drawGrid();
-    if (showInfo)
+    if (isInfo)
         info();
     Raylib.EndDrawing();
 }
 
 Raylib.CloseWindow();
+public enum GameMode
+{
+    Default = 1,
+    LWD = 2,
+    Highlife = 3,
+    DandN = 4
+}
 
-
-//TODO: передавать некоторые значения через параметры запуска
+//TODO: launch parameters
